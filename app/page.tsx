@@ -1,92 +1,47 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
-function Shell({
-  title,
-  subtitle,
-  badge = "Portfolio demo · local-only",
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  badge?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <header className="mb-8">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{badge}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">{subtitle}</p>
-        </header>
-        {children}
-        <footer className="mt-10 border-t border-zinc-200 pt-4 text-xs text-zinc-500 dark:border-zinc-800">
-          Honest demo: no multi-tenant backend. State (if any) stays in this browser.
-        </footer>
-      </div>
-    </div>
-  );
+type Line = { id: string; desc: string; qty: number; price: number };
+type Draft = { from: string; to: string; lines: Line[] };
+
+const INITIAL_DRAFT: Draft = {
+  from: "Bookchaowalit",
+  to: "Client Co.",
+  lines: [
+    { id: "1", desc: "Consulting", qty: 5, price: 1500 },
+    { id: "2", desc: "Hosting", qty: 1, price: 500 },
+  ],
+};
+
+function makeId() {
+  return crypto.randomUUID();
 }
 
-function Button({
-  children,
-  onClick,
-  variant = "primary",
-  disabled,
-  type = "button",
-  className = "",
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  variant?: "primary" | "secondary" | "ghost" | "danger";
-  disabled?: boolean;
-  type?: "button" | "submit";
-  className?: string;
-}) {
-  const base =
-    "inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 " +
-    className;
-  const styles =
-    variant === "primary"
-      ? "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-      : variant === "secondary"
-        ? "bg-white text-zinc-900 ring-1 ring-zinc-200 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700"
-        : variant === "danger"
-          ? "bg-red-600 text-white hover:bg-red-500"
-          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900";
-  return (
-    <button type={type} disabled={disabled} onClick={onClick} className={`${base} ${styles}`}>
-      {children}
-    </button>
-  );
-}
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950";
-
-function useLocalStorage<T>(key: string, initial: T) {
-  const [value, setValue] = useState<T>(initial);
+function useDraft() {
+  const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT);
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(key);
-      if (raw != null) setValue(JSON.parse(raw) as T);
+      const saved = localStorage.getItem("invoice-generator-draft-v2");
+      if (saved) {
+        // Hydrate the browser-only draft after the server-rendered sample.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setDraft(JSON.parse(saved) as Draft);
+      }
     } catch {
-      /* ignore */
+      // Keep the useful sample when local storage is unavailable.
     }
     setReady(true);
-  }, [key]);
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value, ready]);
-  return [value, setValue] as const;
-}
+  }, []);
 
-function uid() {
-  return crypto.randomUUID();
+  useEffect(() => {
+    if (ready) localStorage.setItem("invoice-generator-draft-v2", JSON.stringify(draft));
+  }, [draft, ready]);
+
+  return [draft, setDraft] as const;
 }
 
 async function copyText(text: string) {
@@ -98,45 +53,104 @@ async function copyText(text: string) {
   }
 }
 
-
-type Line = { id: string; desc: string; qty: number; price: number };
 export default function Home() {
-  const [from, setFrom] = useState("Bookchaowalit");
-  const [to, setTo] = useState("Client Co.");
-  const [lines, setLines] = useState<Line[]>([
-    { id: "1", desc: "Consulting", qty: 5, price: 1500 },
-    { id: "2", desc: "Hosting", qty: 1, price: 500 },
-  ]);
-  const total = lines.reduce((a, l) => a + l.qty * l.price, 0);
+  const [draft, setDraft] = useDraft();
+  const [copied, setCopied] = useState(false);
+  const total = useMemo(() => draft.lines.reduce((sum, line) => sum + line.qty * line.price, 0), [draft.lines]);
+  const invoiceText = useMemo(() => [
+    "INVOICE / THB",
+    "From: " + draft.from,
+    "Bill to: " + draft.to,
+    ...draft.lines.map((line) => line.desc + " × " + line.qty + " — ฿" + (line.qty * line.price).toLocaleString()),
+    "Total: ฿" + total.toLocaleString(),
+  ].join("\n"), [draft, total]);
+
+  const updateLine = (id: string, update: Partial<Line>) => {
+    setDraft((current) => ({ ...current, lines: current.lines.map((line) => line.id === id ? { ...line, ...update } : line) }));
+  };
+
+  const addLine = () => {
+    setDraft((current) => ({ ...current, lines: [...current.lines, { id: makeId(), desc: "New line", qty: 1, price: 0 }] }));
+  };
+
+  const removeLine = (id: string) => {
+    setDraft((current) => ({ ...current, lines: current.lines.filter((line) => line.id !== id) }));
+  };
+
+  const copyInvoice = async () => {
+    if (await copyText(invoiceText)) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    }
+  };
+
   return (
-    <Shell title="Invoice Generator" subtitle="Build a simple THB invoice preview entirely client-side.">
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="block space-y-1"><span className="text-sm">From</span><input className={inputClass} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-        <label className="block space-y-1"><span className="text-sm">Bill to</span><input className={inputClass} value={to} onChange={(e) => setTo(e.target.value)} /></label>
-      </div>
-      <div className="mt-4 space-y-2">
-        {lines.map((l) => (
-          <div key={l.id} className="grid grid-cols-[1fr_80px_100px_auto] gap-2">
-            <input className={inputClass} value={l.desc} onChange={(e) => setLines((prev) => prev.map((x) => x.id === l.id ? { ...x, desc: e.target.value } : x))} />
-            <input type="number" className={inputClass} value={l.qty} onChange={(e) => setLines((prev) => prev.map((x) => x.id === l.id ? { ...x, qty: Number(e.target.value) } : x))} />
-            <input type="number" className={inputClass} value={l.price} onChange={(e) => setLines((prev) => prev.map((x) => x.id === l.id ? { ...x, price: Number(e.target.value) } : x))} />
-            <Button variant="ghost" onClick={() => setLines((prev) => prev.filter((x) => x.id !== l.id))}>×</Button>
+    <main className="ledger-room">
+      <span className="contract-mark" dangerouslySetInnerHTML={{ __html: "<!-- THESIS: a THB invoice is assembled like a paper ledger; FINISH: live total, draft paper, local state -->" }} />
+      <div className="ledger-shell">
+        <header className="ledger-topbar">
+          <Link className="ledger-wordmark" href="/">LEDGER / THB</Link>
+          <span>local draft desk · browser only</span>
+        </header>
+
+        <section className="ledger-intro">
+          <div>
+            <p className="ledger-overline">write once / check twice</p>
+            <h1>Make the paper add up.</h1>
           </div>
-        ))}
-        <Button variant="secondary" onClick={() => setLines((prev) => [...prev, { id: uid(), desc: "Item", qty: 1, price: 0 }])}>Add line</Button>
-      </div>
-      <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="text-sm text-zinc-500">Invoice preview</div>
-        <div className="mt-2 font-medium">{from} → {to}</div>
-        <ul className="mt-3 space-y-1 text-sm">
-          {lines.map((l) => (
-            <li key={l.id} className="flex justify-between"><span>{l.desc} × {l.qty}</span><span className="font-mono">฿{(l.qty * l.price).toLocaleString()}</span></li>
-          ))}
-        </ul>
-        <div className="mt-4 flex justify-between border-t border-zinc-200 pt-3 text-lg font-semibold dark:border-zinc-800">
-          <span>Total</span><span className="font-mono">฿{total.toLocaleString()}</span>
+          <p>A focused invoice workbench for small service jobs. Enter the parties and line items on the left; the paper on the right is the truth you can review.</p>
+        </section>
+
+        <div className="ledger-layout">
+          <section className="entry-desk" aria-labelledby="entry-heading">
+            <header className="desk-heading">
+              <div><span className="desk-index">01</span><h2 id="entry-heading">Enter the ledger</h2></div>
+              <span>draft / autosaved locally</span>
+            </header>
+
+            <div className="party-fields">
+              <label htmlFor="from">From<input id="from" value={draft.from} onChange={(event) => setDraft((current) => ({ ...current, from: event.target.value }))} /></label>
+              <label htmlFor="to">Bill to<input id="to" value={draft.to} onChange={(event) => setDraft((current) => ({ ...current, to: event.target.value }))} /></label>
+            </div>
+
+            <div className="line-heading"><span>Line item</span><span>Qty</span><span>Rate / THB</span><span /></div>
+            <div className="line-list">
+              {draft.lines.map((line) => (
+                <div className="line-row" key={line.id}>
+                  <label><span className="sr-only">Description</span><input value={line.desc} onChange={(event) => updateLine(line.id, { desc: event.target.value })} /></label>
+                  <label><span className="sr-only">Quantity</span><input aria-label={line.desc + " quantity"} type="number" min="0" value={line.qty} onChange={(event) => updateLine(line.id, { qty: Number(event.target.value) })} /></label>
+                  <label><span className="sr-only">Rate in Thai baht</span><input aria-label={line.desc + " rate"} type="number" min="0" value={line.price} onChange={(event) => updateLine(line.id, { price: Number(event.target.value) })} /></label>
+                  <button className="remove-line" type="button" onClick={() => removeLine(line.id)} disabled={draft.lines.length === 1}>Remove</button>
+                </div>
+              ))}
+            </div>
+
+            <div className="desk-actions">
+              <button className="outline-button" type="button" onClick={addLine}>Add line</button>
+              <button className="ink-button" type="button" onClick={copyInvoice}>{copied ? "Copied text" : "Copy invoice text"}</button>
+            </div>
+            <p className="desk-footnote">This is a portfolio-quality local preview, not a tax filing system or shared accounting service.</p>
+          </section>
+
+          <aside className="invoice-paper" aria-label="Invoice preview">
+            <div className="paper-top">
+              <span className="paper-title">INVOICE</span>
+              <span className="paper-meta">THB / DRAFT</span>
+            </div>
+            <div className="paper-rule" />
+            <div className="paper-parties"><div><span>FROM</span><strong>{draft.from || "Unnamed sender"}</strong></div><div><span>BILL TO</span><strong>{draft.to || "Unnamed client"}</strong></div></div>
+            <div className="paper-lines">
+              {draft.lines.map((line) => <div className="paper-line" key={line.id}><span>{line.desc || "Untitled line"} <small>× {line.qty}</small></span><b>฿{(line.qty * line.price).toLocaleString()}</b></div>)}
+              {draft.lines.length === 0 && <p className="paper-empty">Add a line to begin.</p>}
+            </div>
+            <div className="paper-total"><span>TOTAL DUE</span><strong>฿{total.toLocaleString()}</strong></div>
+            <div className="paper-stamp">LOCAL<br />DRAFT</div>
+            <p className="paper-note">Prepared in the browser · state is not shared</p>
+          </aside>
         </div>
+
+        <footer className="ledger-footer">No account, payment action, or tax claim is hidden in this prototype. The arithmetic stays inspectable.</footer>
       </div>
-    </Shell>
+    </main>
   );
 }
