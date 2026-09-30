@@ -63,3 +63,23 @@ describe("VAT and withholding tax", () => {
     expect(parseDraft(JSON.stringify({ ...base, vat: "yes", wht: 4 }))).toMatchObject({ vat: false, wht: 0 });
   });
 });
+
+describe("satang rounding edge cases", () => {
+  it("rounds half a satang up even when the float sits just below .5", () => {
+    expect(toAmount(1.005)).toBe(1.01);
+    expect(toAmount("8.345")).toBe(8.35);
+    expect(lineTotal({ qty: 0.5, price: 2.01 })).toBe(1.01);
+    expect(lineTotal({ qty: 1.5, price: 0.67 })).toBe(1.01);
+    expect(lineTotal({ qty: 3, price: 1.15 })).toBe(3.45);
+  });
+
+  it("keeps totals on whole satang for a VAT + WHT invoice", () => {
+    const totals = invoiceTotals({ lines: [{ id: "a", desc: "", qty: 0.5, price: 2.01 }], vat: true, wht: 3 });
+    expect(totals).toEqual({ subtotal: 1.01, vat: 0.07, wht: 0.03, due: 1.05 });
+  });
+
+  it("drops repeated line ids and accepts a BOM-prefixed saved draft", () => {
+    const raw = "﻿" + JSON.stringify({ from: "a", to: "b", lines: [{ id: "1", desc: "x", qty: 1, price: 1 }, { id: "1", desc: "y", qty: 2, price: 2 }] });
+    expect(parseDraft(raw)?.lines.map((line) => line.desc)).toEqual(["x"]);
+  });
+});

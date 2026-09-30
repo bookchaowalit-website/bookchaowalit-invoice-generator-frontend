@@ -23,3 +23,15 @@ Score: 8/10 (was 7/10) — tested invoice arithmetic incl. optional VAT 7% / wit
 
 - Canonical host is config-driven: `lib/site.ts` resolves `NEXT_PUBLIC_SITE_URL` (validated, clear error on a non-http(s) value) and feeds `metadataBase`, generated `app/sitemap.ts` / `app/robots.ts` and the MCP `get_app_info` URL; removed the stale template `public/sitemap.xml` / `robots.txt` (they pointed at `bookchaowalit.com` and a `*.vercel.app` name that differs from the project URL). Tested in `lib/site.test.ts`.
 - Optional VAT 7% and withholding tax (1/2/3/5% of the pre-VAT subtotal, Thai practice) in `lib/invoice.ts` (`invoiceTotals`), each rounded half-up to the satang; shown on the paper and in copied text only when a tax applies; stored drafts validated/upgraded. Tested.
+
+## Done in this pass (pass 3)
+- Edge-case pass on `lib/invoice.ts` (regression tests in `lib/invoice.test.ts`):
+  - Satang rounding used `Math.round(x * 100) / 100`, which rounds binary
+    floats *down* at the half: `1.005` became 1.00 and a line of 0.5 × 2.01
+    (exactly 1.005 baht) was billed 1.00 instead of 1.01 (also 1.5 × 0.67).
+    New `roundSatang` removes the representation error before rounding half-up;
+    used by `toAmount`, `lineTotal` and the total due.
+  - Saved drafts with repeated line ids (duplicate React keys, edited
+    together) or a leading BOM are handled.
+- Backlog (P2): amounts above ~9e13 baht lose satang precision (2^53); cap
+  inputs or switch to integer satang if very large invoices are in scope.

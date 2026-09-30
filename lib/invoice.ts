@@ -8,15 +8,26 @@ export type Draft = { number: string; issued: string; from: string; to: string; 
 
 export type Totals = { subtotal: number; vat: number; wht: number; due: number };
 
+/**
+ * Round half-up to the satang. `Math.round(x * 100) / 100` is wrong on binary
+ * floats: 1.005 * 100 is 100.49999999999999, so 1.005 became 1.00 and a line
+ * of 0.5 × 2.01 (exactly 1.005) was billed 1.00 instead of 1.01. Rounding the
+ * scaled value to 15 significant digits first removes that representation
+ * error before the half-up step.
+ */
+export function roundSatang(value: number): number {
+  return Math.round(Number((value * 100).toPrecision(15))) / 100;
+}
+
 /** Coerces user input to a finite, non-negative number with at most 2 decimals. */
 export function toAmount(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n) || n < 0) return 0;
-  return Math.round(n * 100) / 100;
+  return roundSatang(n);
 }
 
 export function lineTotal(line: Pick<Line, "qty" | "price">): number {
-  return Math.round(toAmount(line.qty) * toAmount(line.price) * 100) / 100;
+  return roundSatang(toAmount(line.qty) * toAmount(line.price));
 }
 
 export function invoiceTotal(lines: Line[]): number {
@@ -36,7 +47,7 @@ export function invoiceTotals(draft: Pick<Draft, "lines" | "vat" | "wht">): Tota
   const subtotal = invoiceTotal(draft.lines);
   const vat = draft.vat ? percentOf(subtotal, VAT_RATE) : 0;
   const wht = percentOf(subtotal, draft.wht);
-  return { subtotal, vat, wht, due: Math.round((subtotal + vat - wht) * 100) / 100 };
+  return { subtotal, vat, wht, due: roundSatang(subtotal + vat - wht) };
 }
 
 export function isWhtRate(value: unknown): value is WhtRate {
@@ -79,14 +90,15 @@ function isLine(value: unknown): value is Line {
 export function parseDraft(raw: string | null): Draft | null {
   if (!raw) return null;
   try {
-    const data = JSON.parse(raw) as Record<string, unknown>;
+    const data = JSON.parse(raw.replace(/^\uFEFF/, "")) as Record<string, unknown>;
     if (typeof data !== "object" || data === null || typeof data.from !== "string" || typeof data.to !== "string" || !Array.isArray(data.lines)) return null;
     return {
       number: typeof data.number === "string" ? data.number : "",
       issued: typeof data.issued === "string" ? data.issued : "",
       from: data.from,
       to: data.to,
-      lines: data.lines.filter(isLine).map((line) => ({ ...line, qty: toAmount(line.qty), price: toAmount(line.price) })),
+      // Repeated line ids would collide as React keys and be edited together.
+      lines: data.lines.filter(isLine).filter((line, index, all) => all.findIndex((other) => isLine(other) && other.id === line.id) === index).map((line) => ({ ...line, qty: toAmount(line.qty), price: toAmount(line.price) })),
       vat: data.vat === true,
       wht: isWhtRate(data.wht) ? data.wht : 0,
     };
