@@ -1,11 +1,12 @@
 import { handleRpc } from "@/lib/mcp";
+import { SITE_URL } from "@/lib/site";
 
 export const runtime = "edge";
 
 const APP = {
   name: "Invoice Generator",
   description: "Build and review a local THB invoice draft in the browser.",
-  url: "https://bookchaowalit-invoice-generator-frontend.vercel.app",
+  url: SITE_URL,
 };
 
 export async function POST(request: Request) {

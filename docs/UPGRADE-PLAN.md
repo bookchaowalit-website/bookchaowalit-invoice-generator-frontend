@@ -19,3 +19,7 @@ Score: 7/10 (was 5/10) — invoice arithmetic is now tested and robust to bad in
 - Invoice math moved to `lib/invoice.ts` (tested): negative/NaN input clamps to 0, totals round to 2 decimals, stored drafts are validated and upgraded.
 - Added invoice number + issue date, a Print / save PDF action with a print stylesheet, clipboard-failure feedback, and labels for every line input.
 - Removed the hidden `dangerouslySetInnerHTML` design-note span and the set-state-in-effect lint suppression (now `lib/use-stored-state.ts`).
+
+## Done in this pass (pass 2)
+
+- Canonical host is config-driven: `lib/site.ts` resolves `NEXT_PUBLIC_SITE_URL` (validated, clear error on a non-http(s) value) and feeds `metadataBase`, generated `app/sitemap.ts` / `app/robots.ts` and the MCP `get_app_info` URL; removed the stale template `public/sitemap.xml` / `robots.txt` (they pointed at `bookchaowalit.com` and a `*.vercel.app` name that differs from the project URL). Tested in `lib/site.test.ts`.

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 import { DM_Mono, DM_Sans, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
@@ -11,7 +12,7 @@ const ledgerDisplay = Newsreader({ variable: "--font-ledger-display", subsets: [
 export const metadata: Metadata = {
   title: "Ledger — THB invoice draft desk",
   description: "Build and review a local THB invoice draft in the browser.",
-  metadataBase: new URL("https://invoice-generator.bookchaowalit.com"),
+  metadataBase: new URL(SITE_URL),
   alternates: { canonical: "https://invoice-generator.bookchaowalit.com" },
 };
 

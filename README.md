@@ -31,3 +31,7 @@ npm run build
 ```
 
 CI runs the same checks on every push (`.github/workflows/ci.yml`).
+
+## Configuration
+
+- `NEXT_PUBLIC_SITE_URL` (optional): canonical origin used for metadata, `/sitemap.xml`, `/robots.txt` and the MCP app info. Defaults to `https://invoice-generator.bookchaowalit.com`; must be an absolute http(s) URL.
