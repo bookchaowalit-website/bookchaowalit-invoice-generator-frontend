@@ -2,11 +2,10 @@
 
 ## Current state
 
-Score: 7/10 (was 5/10) — invoice arithmetic is now tested and robust to bad input, print/PDF works, CI in place; no tax/VAT support.
+Score: 8/10 (was 7/10) — tested invoice arithmetic incl. optional VAT 7% / withholding tax, print/PDF, config-driven canonical host, CI.
 
 ## Backlog
 
-- P1: Optional VAT (7%) and withholding-tax lines with tested rounding.
 - P1: Multiple saved drafts (currently one autosaved draft).
 - P2: Playwright smoke test (edit line, copy, print view).
 - P2: Due date / payment terms field.
@@ -23,3 +22,4 @@ Score: 7/10 (was 5/10) — invoice arithmetic is now tested and robust to bad in
 ## Done in this pass (pass 2)
 
 - Canonical host is config-driven: `lib/site.ts` resolves `NEXT_PUBLIC_SITE_URL` (validated, clear error on a non-http(s) value) and feeds `metadataBase`, generated `app/sitemap.ts` / `app/robots.ts` and the MCP `get_app_info` URL; removed the stale template `public/sitemap.xml` / `robots.txt` (they pointed at `bookchaowalit.com` and a `*.vercel.app` name that differs from the project URL). Tested in `lib/site.test.ts`.
+- Optional VAT 7% and withholding tax (1/2/3/5% of the pre-VAT subtotal, Thai practice) in `lib/invoice.ts` (`invoiceTotals`), each rounded half-up to the satang; shown on the paper and in copied text only when a tax applies; stored drafts validated/upgraded. Tested.

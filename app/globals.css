@@ -34,6 +34,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--red); outli
 .line-row input { margin-top: 0; font-family: var(--font-ledger-mono), monospace; font-size: 13px; }
 .remove-line { border: 0; background: transparent; color: var(--red-dark); padding: 9px 0; cursor: pointer; font-family: var(--font-ledger-mono), monospace; font-size: 9px; text-transform: uppercase; }
 .remove-line:disabled { cursor: not-allowed; opacity: .3; }
+.tax-fields { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: end; margin: 22px 0 0; border: 0; border-top: 1px solid var(--line); padding: 18px 0 0; }
+.tax-fields legend { float: left; width: 100%; margin-bottom: 10px; color: var(--muted); font-family: var(--font-ledger-mono), monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.tax-fields label { color: var(--ink); font-size: 14px; }
+.tax-check { display: inline-flex; gap: 8px; align-items: center; }
+.tax-fields select { display: block; margin-top: 6px; border: 1px solid var(--line); background: transparent; color: var(--ink); padding: 7px 8px; font-size: 15px; }
+.tax-fields select:focus-visible, .tax-check input:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 .desk-actions { display: flex; gap: 12px; flex-wrap: wrap; padding: 24px 0 12px; }
 .outline-button, .ink-button { border: 1px solid var(--ink); border-radius: 0; padding: 12px 15px; cursor: pointer; font-size: 13px; }
 .outline-button { background: transparent; color: var(--ink); }
@@ -56,6 +62,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--red); outli
 .paper-line small { color: var(--muted); font-size: 10px; }
 .paper-line b { color: var(--blue); white-space: nowrap; font-weight: 500; }
 .paper-empty { color: var(--muted); font-size: 13px; }
+.paper-taxes { margin: 30px 0 0; }
+.paper-taxes div { display: flex; justify-content: space-between; gap: 15px; padding: 5px 0; font-family: var(--font-ledger-mono), monospace; font-size: 13px; }
+.paper-taxes dt { color: var(--muted); }
+.paper-taxes dd { margin: 0; }
 .paper-total { display: flex; align-items: end; justify-content: space-between; gap: 15px; border-top: 2px solid var(--ink); margin-top: 38px; padding-top: 13px; }
 .paper-total strong { color: var(--red-dark); font-family: var(--font-ledger-mono), monospace; font-size: 24px; }
 .paper-stamp { position: absolute; right: 26px; bottom: 96px; border: 1px solid var(--red); color: var(--red); padding: 9px; transform: rotate(-8deg); font-family: var(--font-ledger-mono), monospace; font-size: 9px; letter-spacing: .15em; line-height: 1.4; text-align: center; }

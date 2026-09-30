@@ -5,6 +5,7 @@ THB invoice preview client-side.
 ## Features
 - Editable sender, client, invoice number, issue date and line items
 - Live THB totals (non-negative, rounded to satang)
+- Optional VAT 7% and withholding tax (1/2/3/5% of the pre-VAT subtotal); not a Thai tax invoice
 - Copy as plain text, or print / save as PDF (print view shows only the invoice paper)
 - Draft autosaved to localStorage (validated on load)
 

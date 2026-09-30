@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatTHB, invoiceText as renderInvoiceText, invoiceTotal, lineTotal, parseDraft, toAmount, type Draft, type Line } from "@/lib/invoice";
+import { formatTHB, invoiceText as renderInvoiceText, invoiceTotals, isWhtRate, lineTotal, parseDraft, toAmount, VAT_RATE, WHT_RATES, type Draft, type Line } from "@/lib/invoice";
 import { useStoredState } from "@/lib/use-stored-state";
 
 const INITIAL_DRAFT: Draft = {
@@ -14,6 +14,8 @@ const INITIAL_DRAFT: Draft = {
     { id: "1", desc: "Consulting", qty: 5, price: 1500 },
     { id: "2", desc: "Hosting", qty: 1, price: 500 },
   ],
+  vat: false,
+  wht: 0,
 };
 
 async function copyText(text: string) {
@@ -28,7 +30,7 @@ async function copyText(text: string) {
 export default function Home() {
   const [draft, setDraft] = useStoredState("invoice-generator-draft-v2", INITIAL_DRAFT, parseDraft);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
-  const total = useMemo(() => invoiceTotal(draft.lines), [draft.lines]);
+  const totals = useMemo(() => invoiceTotals(draft), [draft]);
   const invoiceText = useMemo(() => renderInvoiceText(draft), [draft]);
 
   const updateLine = (id: string, update: Partial<Line>) => {
@@ -90,13 +92,23 @@ export default function Home() {
               ))}
             </div>
 
+            <fieldset className="tax-fields">
+              <legend>Tax</legend>
+              <label className="tax-check"><input type="checkbox" checked={draft.vat} onChange={(event) => setDraft((current) => ({ ...current, vat: event.target.checked }))} /> Add VAT {VAT_RATE}%</label>
+              <label htmlFor="wht">Withholding tax
+                <select id="wht" value={draft.wht} onChange={(event) => { const rate = Number(event.target.value); if (isWhtRate(rate)) setDraft((current) => ({ ...current, wht: rate })); }}>
+                  {WHT_RATES.map((rate) => <option key={rate} value={rate}>{rate === 0 ? "None" : rate + "% of subtotal"}</option>)}
+                </select>
+              </label>
+            </fieldset>
+
             <div className="desk-actions">
               <button className="outline-button" type="button" onClick={addLine}>Add line</button>
               <button className="ink-button" type="button" onClick={copyInvoice}>{copyState === "copied" ? "Copied text" : copyState === "failed" ? "Copy blocked" : "Copy invoice text"}</button>
               <button className="outline-button" type="button" onClick={() => window.print()}>Print / save PDF</button>
             </div>
             <p className="sr-only" role="status">{copyState === "copied" ? "Invoice text copied to the clipboard." : copyState === "failed" ? "The browser blocked clipboard access." : ""}</p>
-            <p className="desk-footnote">This is a portfolio-quality local preview, not a tax filing system or shared accounting service.</p>
+            <p className="desk-footnote">This is a portfolio-quality local preview, not a tax filing system or shared accounting service. VAT and withholding lines are arithmetic aids; they do not make this a Thai tax invoice.</p>
           </section>
 
           <aside className="invoice-paper" aria-label="Invoice preview">
@@ -110,13 +122,20 @@ export default function Home() {
               {draft.lines.map((line) => <div className="paper-line" key={line.id}><span>{line.desc || "Untitled line"} <small>× {line.qty}</small></span><b>{formatTHB(lineTotal(line))}</b></div>)}
               {draft.lines.length === 0 && <p className="paper-empty">Add a line to begin.</p>}
             </div>
-            <div className="paper-total"><span>TOTAL DUE</span><strong>{formatTHB(total)}</strong></div>
+            {(draft.vat || draft.wht > 0) && (
+              <dl className="paper-taxes">
+                <div><dt>Subtotal</dt><dd>{formatTHB(totals.subtotal)}</dd></div>
+                {draft.vat && <div><dt>VAT {VAT_RATE}%</dt><dd>{formatTHB(totals.vat)}</dd></div>}
+                {draft.wht > 0 && <div><dt>Withholding tax {draft.wht}%</dt><dd>−{formatTHB(totals.wht)}</dd></div>}
+              </dl>
+            )}
+            <div className="paper-total"><span>TOTAL DUE</span><strong>{formatTHB(totals.due)}</strong></div>
             <div className="paper-stamp">LOCAL<br />DRAFT</div>
             <p className="paper-note">Prepared in the browser · state is not shared</p>
           </aside>
         </div>
 
-        <footer className="ledger-footer">No account, payment action, or tax claim is hidden in this prototype. The arithmetic stays inspectable.</footer>
+        <footer className="ledger-footer">No account, payment action, or hidden tax logic in this prototype. The arithmetic stays inspectable.</footer>
       </div>
     </main>
   );
