@@ -35,3 +35,4 @@ Score: 8/10 (was 7/10) — tested invoice arithmetic incl. optional VAT 7% / wit
     together) or a leading BOM are handled.
 - Backlog (P2): amounts above ~9e13 baht lose satang precision (2^53); cap
   inputs or switch to integer satang if very large invoices are in scope.
+- Security deps: `next` 16.1.6 -> 16.3.8 (and `eslint-config-next`) clears critical GHSA-2xp9-vwfh-vxw4 (Image Optimization RCE) plus bundled postcss/sharp highs; lockfile regenerated with same-major `npm audit fix`. `npm audit --omit=dev`: C1/H3/M1/L0 [nanoid:h,next:c,postcss:h,sharp:h] -> C0/H0/M0/L0.
